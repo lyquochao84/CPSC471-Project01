@@ -24,13 +24,11 @@ FTP Client:
 
 using namespace std;
 
-const char* FILES_FOLDER = "files/";
-
 void receiveFile(int clientSocket, const std::string& filename) {
     char buffer[BUFFER_SIZE];
 
     // Check if the requested file exists
-    std::ifstream infile(FILES_FOLDER + filename, std::ios::binary);
+    std::ifstream infile("files/" + filename, std::ios::binary);
     if (!infile) {
         std::cerr << "Error: File '" << filename << "' not found\n";
         const char* errorMessage = "File not found";
@@ -43,22 +41,31 @@ void receiveFile(int clientSocket, const std::string& filename) {
     const char* successMessage = "File found";
     send(clientSocket, successMessage, strlen(successMessage), 0);
 
-    // Create file for saving received data
+    // Get file size
+    infile.open("files/" + filename, std::ios::binary | std::ios::ate);
+    std::streamsize fileSize = infile.tellg();
+    infile.seekg(0, std::ios::beg);
+
+    // Send file size
+    send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
+
+    // Receive and save file data
     std::ofstream outfile(filename, std::ios::binary);
     if (!outfile) {
         std::cerr << "Error: Could not create file\n";
         return;
     }
-
-    // Receive and save file data
     ssize_t bytesRead;
-    while ((bytesRead = recv(clientSocket, buffer, BUFFER_SIZE, 0)) > 0) {
-        outfile.write(buffer, bytesRead);
+    while (fileSize > 0 && (bytesRead = recv(clientSocket, buffer, std::min(static_cast<std::streamsize>(fileSize), static_cast<std::streamsize>(BUFFER_SIZE)), 0)) > 0) {
+      outfile.write(buffer, bytesRead);
+      fileSize -= bytesRead;
     }
     outfile.close();
 
     std::cout << "File " << filename << " saved successfully.\n";
+    return;
 }
+
 
 void sendFile(int clientSocket, const string& filename) {
     ifstream infile("files/" + filename, ios::binary);

@@ -22,21 +22,39 @@ const int BUFFER_SIZE = 1024;
 const char* FILES_FOLDER = "files/";
 
 void sendFile(int clientSocket, const char* fileName) {
-    std::ifstream fileStream(fileName, std::ios::binary);
+    std::ifstream fileStream("files/" + std::string(fileName), std::ios::binary);
     if (!fileStream.is_open()) {
         const char* errorMessage = "File not found";
         send(clientSocket, errorMessage, strlen(errorMessage), 0);
         return;
     }
 
+    // Send "File found" message
+    const char* successMessage = "File found";
+    send(clientSocket, successMessage, strlen(successMessage), 0);
+
+    // Get file size
+    fileStream.seekg(0, std::ios::end);
+    std::streamsize fileSize = fileStream.tellg();
+    fileStream.seekg(0, std::ios::beg);
+
+    // Send file size
+    send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
+
+    // Send file data
     char buffer[BUFFER_SIZE];
-    while (!fileStream.eof()) {
-        fileStream.read(buffer, BUFFER_SIZE);
-        send(clientSocket, buffer, fileStream.gcount(), 0);
+    while (fileSize > 0) {
+      std::streamsize bytesRead = fileStream.readsome(buffer, std::min(fileSize, static_cast<std::streamsize>(BUFFER_SIZE)));
+      if (bytesRead <= 0) {
+        break;
+      }
+      send(clientSocket, buffer, bytesRead, 0);
+      fileSize -= bytesRead;
     }
 
     fileStream.close();
 }
+
 
 void putFile(int clientSocket, const char* fileName) {
     std::ofstream fileStream(std::string(FILES_FOLDER) + fileName);
@@ -119,10 +137,10 @@ int main() {
             } else if (strcmp(buffer, "ls") == 0) {
                 listFiles(clientSocket);
             } else if (strncmp(buffer, "get", 3) == 0) {
-                const char* fileName = buffer + 4; // Skip "get "
+                const char* fileName = buffer + 4; 
                 sendFile(clientSocket, fileName);
             } else if (strncmp(buffer, "put", 3) == 0) {
-                const char* fileName = buffer + 4; // Skip "put "
+                const char* fileName = buffer + 4; 
                 putFile(clientSocket, fileName);
             }
         }
