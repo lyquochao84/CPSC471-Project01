@@ -21,8 +21,9 @@ const int PORT = 12000;
 const int BUFFER_SIZE = 1024;
 const char* FILES_FOLDER = "files/";
 
+// [GET] Command (server)
 void sendFile(int clientSocket, const char* fileName) {
-    std::ifstream fileStream("files/" + std::string(fileName), std::ios::binary);
+    std::ifstream fileStream(std::string(FILES_FOLDER) + fileName, std::ios::binary);
     if (!fileStream.is_open()) {
         const char* errorMessage = "File not found";
         send(clientSocket, errorMessage, strlen(errorMessage), 0);
@@ -44,18 +45,18 @@ void sendFile(int clientSocket, const char* fileName) {
     // Send file data
     char buffer[BUFFER_SIZE];
     while (fileSize > 0) {
-      std::streamsize bytesRead = fileStream.readsome(buffer, std::min(fileSize, static_cast<std::streamsize>(BUFFER_SIZE)));
-      if (bytesRead <= 0) {
-        break;
-      }
-      send(clientSocket, buffer, bytesRead, 0);
-      fileSize -= bytesRead;
+        std::streamsize bytesRead = fileStream.readsome(buffer, std::min(fileSize, static_cast<std::streamsize>(BUFFER_SIZE)));
+        if (bytesRead <= 0) {
+            break;
+        }
+        send(clientSocket, buffer, bytesRead, 0);
+        fileSize -= bytesRead;
     }
 
     fileStream.close();
 }
 
-
+// [PUT] Command (server)
 void putFile(int clientSocket, const char* fileName) {
     std::ofstream fileStream(std::string(FILES_FOLDER) + fileName);
     fileStream.close();
@@ -64,20 +65,32 @@ void putFile(int clientSocket, const char* fileName) {
     send(clientSocket, successMessage, strlen(successMessage), 0);
 }
 
-
+// [ls] Command (server)
 void listFiles(int clientSocket) {
     DIR *dir;
     struct dirent *ent;
+    int filesFound = 0; // Track if any files are found
+
     if ((dir = opendir(FILES_FOLDER)) != NULL) {
         while ((ent = readdir(dir)) != NULL) {
             if (ent->d_type == DT_REG) {
+                filesFound = 1; // Set flag if file is found
                 send(clientSocket, ent->d_name, strlen(ent->d_name), 0);
                 send(clientSocket, "\n", 1, 0);
             }
         }
         closedir(dir);
+
+        if (!filesFound) { // If no files were found
+            const char* errorMessage = "No files saved in this folder!\n";
+            send(clientSocket, errorMessage, strlen(errorMessage), 0);
+        }
+    } else {
+        const char* errorMessage = "Error opening directory\n";
+        send(clientSocket, errorMessage, strlen(errorMessage), 0);
     }
 }
+
 
 int main() {
     int serverSocket, clientSocket;
@@ -147,6 +160,40 @@ int main() {
 
         close(clientSocket);
     }
+// [GET] Command (server)
+void sendFile(int clientSocket, const char* fileName) {
+    std::ifstream fileStream(std::string(FILES_FOLDER) + fileName, std::ios::binary);
+    if (!fileStream.is_open()) {
+        const char* errorMessage = "File not found";
+        send(clientSocket, errorMessage, strlen(errorMessage), 0);
+        return;
+    }
+
+    // Send "File found" message
+    const char* successMessage = "File found";
+    send(clientSocket, successMessage, strlen(successMessage), 0);
+
+    // Get file size
+    fileStream.seekg(0, std::ios::end);
+    std::streamsize fileSize = fileStream.tellg();
+    fileStream.seekg(0, std::ios::beg);
+
+    // Send file size
+    send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
+
+    // Send file data
+    char buffer[BUFFER_SIZE];
+    while (fileSize > 0) {
+        std::streamsize bytesRead = fileStream.readsome(buffer, std::min(fileSize, static_cast<std::streamsize>(BUFFER_SIZE)));
+        if (bytesRead <= 0) {
+            break;
+        }
+        send(clientSocket, buffer, bytesRead, 0);
+        fileSize -= bytesRead;
+    }
+
+    fileStream.close();
+}
 
     close(serverSocket);
     return 0;

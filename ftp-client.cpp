@@ -24,6 +24,7 @@ FTP Client:
 
 using namespace std;
 
+// [GET] Command (client)
 void receiveFile(int clientSocket, const std::string& filename) {
     char buffer[BUFFER_SIZE];
 
@@ -66,7 +67,7 @@ void receiveFile(int clientSocket, const std::string& filename) {
     return;
 }
 
-
+// [PUT] Command (client)
 void sendFile(int clientSocket, const string& filename) {
     ifstream infile("files/" + filename, ios::binary);
     if (!infile) {
@@ -85,7 +86,7 @@ void sendFile(int clientSocket, const string& filename) {
     infile.close();
 }
 
-
+// [ls] command (client)
 void listFiles() {
     DIR* dir;
     struct dirent* ent;
@@ -134,9 +135,9 @@ int main() {
         // Send command to server
         send(clientSocket, command.c_str(), command.length(), 0);
 
-        // Handle quit command
+        // [quit] Handle quit command
         if (command == "quit") {
-            cout << "quitted" << endl;
+            cout << "Disconnected" << endl;
             break;
         }
 
