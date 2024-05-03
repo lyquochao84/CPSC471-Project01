@@ -5,7 +5,7 @@
 ## Group Members
 * Hao Ly (hly66@csu.fullerton.edu)
 * Chingsan Ly (cly53@csu.fullerton.edu)
-* Tristan Do 
+* Tristan Do  (tdo297@csu.fullerton.edu)
 ## Description
 - Implement FTP Server and FTP Client
 - The client shall connect to the server and support uploading and downloading of files to/from server
