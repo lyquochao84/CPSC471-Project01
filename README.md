@@ -17,7 +17,7 @@
 ## Operating System
 - Linux
 ## Diagram
-* Please see attached file [here](https://github.com/lyquochao84/FTP-Project/blob/main/Diagram.png)
+* Design file [Diagram](https://github.com/lyquochao84/FTP-Project/blob/main/Diagram.png)
 
 ## Execute Program
 **1) Compile and Start the Server**
